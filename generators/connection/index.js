@@ -83,6 +83,8 @@ module.exports = class ConnectionGenerator extends Generator {
       if (this.srcType === 'ts') {
         this.devDependencies.push('@types/validator');
       }
+    } else if (adapter === 'arango') {
+      this.dependencies.push('arangojs');
     }
 
     switch (database) {
@@ -144,6 +146,16 @@ module.exports = class ConnectionGenerator extends Generator {
         }
       };
 
+    case 'arangodb':
+      parsed = url.parse(connectionString);
+
+      return {
+        url: `${parsed.protocol}//${parsed.host}`,
+        databaseName: parsed.path.substring(1, parsed.path.length),
+        username: parsed.auth.split(':')[0],
+        password: parsed.auth.split(':')[1],
+      };
+
     default:
       throw new Error(`Invalid database '${database}'. Cannot assemble configuration.`);
     }
@@ -203,6 +215,9 @@ module.exports = class ConnectionGenerator extends Generator {
           case 'mongoose':
             setProps({ database: 'mongodb' });
             return false;
+          case 'arango':
+            setProps({ database: 'arangodb' });
+            return false;
           }
 
           return true;
@@ -261,6 +276,7 @@ module.exports = class ConnectionGenerator extends Generator {
           case 'nedb':
           case 'memory':
           case 'cassandra':
+          case 'arangodb':
             return false;
           }
 
@@ -281,7 +297,8 @@ module.exports = class ConnectionGenerator extends Generator {
             postgres: `postgres://postgres:@localhost:5432/${databaseName}`,
             sqlite: `sqlite://${databaseName}.sqlite`,
             mssql: `mssql://root:password@localhost:1433/${databaseName}`,
-            cassandra: `cassandra://localhost:9042/${databaseName}`
+            cassandra: `cassandra://localhost:9042/${databaseName}`,
+            arangodb: `http://root:@localhost:8529/${databaseName}`,
           };
 
           return defaultConnectionStrings[database];
@@ -381,6 +398,7 @@ module.exports = class ConnectionGenerator extends Generator {
       // case 'oracle':
       case 'postgres': // eslint-disable-line no-fallthrough
       case 'cassandra':
+      case 'arangodb':
         this.log(`Make sure that your ${database} database is running, the username/role is correct, and "${connectionString}" is reachable and the database has been created.`);
         this.log('Your configuration can be found in the projects config/ folder.');
         break;
